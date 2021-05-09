@@ -3,6 +3,8 @@ package client;
 import commons.app.Command;
 import commons.app.CommandCenter;
 import commons.commands.Help;
+import commons.commands.Login;
+import commons.commands.Register;
 import commons.elements.Worker;
 import commons.utils.UserInterface;
 import commons.utils.SerializationTool;
@@ -48,6 +50,9 @@ public class Client implements Runnable {
             }
             Client client = new Client();
             client.connect(host, port);
+            boolean entrance = client.authorisation();
+            if (!entrance)
+                System.exit(0);
             client.run();
             while (true) {
                 String confirmation = userInterface.readUnlimitedArgument("Сервер временно недоступен, хотите повторить подключение? (да/нет)", false);
@@ -105,7 +110,7 @@ public class Client implements Runnable {
             boolean availability = false;
             Scanner scanner = new Scanner(System.in);
             datagramChannel.register(selector, SelectionKey.OP_READ);
-            sendCommand(new Help());
+//            sendCommand(new Help());
             while (true) {
                 int count = selector.select();
                 if (count == 0) {
@@ -120,7 +125,7 @@ public class Client implements Runnable {
                         byte[] toBeReceived = receiveAnswer();
                         String answer = (String) new SerializationTool().deserializeObject(toBeReceived);
                         if (!availability) {
-                            userInterface.displayMessage("Подключение успешно! Список возможных команд:" + "\n" + answer);
+                            userInterface.displayMessage("Подключение успешно!" + "\n");
                             availability = true;
                         }
                         if (!answer.contains("Awaiting further client instructions.")) {
@@ -173,6 +178,42 @@ public class Client implements Runnable {
         } catch (IOException e) {
             userInterface.displayMessage("Произошла неизвестная ошибка ввода-вывода");
             System.exit(-1);
+        }
+    }
+
+    public boolean authorisation() {
+        String action = userInterface.readUnlimitedArgument("Здравствуйте! Введите login, если вы уже зарегистрированы. В ином случае, введите register.", false);
+        if (action.equals("login")) {
+            login();
+        } else {
+            if (action.equals("register")) {
+                register();
+            } else return false;
+        }
+        return true;
+    }
+
+    public void login() {
+        try {
+            String login = userInterface.readUnlimitedArgument("Введите ваш логин:", false);
+            String password = userInterface.readUnlimitedArgument("Введите пароль", false);
+            Command cmd = new Login();
+            cmd.setStringArgs(login, password);
+            sendCommand(cmd);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void register() {
+        try {
+            String login = userInterface.readUnlimitedArgument("Придумайте логин:", false);
+            String password = userInterface.readUnlimitedArgument("Введите пароль", false);
+            Command cmd = new Register();
+            cmd.setStringArgs(login, password);
+            sendCommand(cmd);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }
