@@ -125,7 +125,7 @@ public class Client implements Runnable {
                         byte[] toBeReceived = receiveAnswer();
                         String answer = (String) new SerializationTool().deserializeObject(toBeReceived);
                         if (!availability) {
-                            userInterface.displayMessage("Подключение успешно!" + "\n");
+                            userInterface.displayMessage("Подключение успешно!");
                             availability = true;
                         }
                         if (!answer.contains("Awaiting further client instructions.")) {
@@ -159,10 +159,15 @@ public class Client implements Runnable {
                                     sendCommand(cmd);
                                 }
                                 if (cmd.getArgumentAmount() == 2 && cmd.getNeedsObject()) {
-                                    Worker worker = userInterface.readWorker(userInterface);
-                                    cmd.setArgument(args[1]);
-                                    cmd.setObject(worker);
-                                    sendCommand(cmd);
+                                    try {
+                                        cmd.setArgument(args[1]);
+                                        Worker worker = userInterface.readWorker(userInterface);
+                                        cmd.setObject(worker);
+                                        sendCommand(cmd);
+                                    } catch (ArrayIndexOutOfBoundsException e) {
+                                        userInterface.displayMessage("Неверно указан аргумент команды");
+                                        datagramChannel.register(selector, SelectionKey.OP_WRITE);
+                                    }
                                 }
                             } else {
                                 userInterface.displayMessage("Введена несуществующая команда, используйте команду help, " +
