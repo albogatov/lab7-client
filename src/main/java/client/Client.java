@@ -2,6 +2,7 @@ package client;
 
 import commons.app.Command;
 import commons.app.CommandCenter;
+import commons.app.User;
 import commons.commands.Help;
 import commons.commands.Login;
 import commons.commands.Register;
@@ -21,12 +22,15 @@ import java.nio.channels.Selector;
 import java.nio.channels.UnresolvedAddressException;
 import java.util.*;
 
+import static client.PasswordEncoder.getHexString;
+
 public class Client implements Runnable {
     private SocketAddress socketAddress;
     private final DatagramChannel datagramChannel;
     private final Selector selector;
     private final UserInterface userInterface = new UserInterface(new InputStreamReader(System.in),
             new OutputStreamWriter(System.out), true);
+    private User user = null;
 
     public Client() throws IOException {
         selector = Selector.open();
@@ -50,9 +54,9 @@ public class Client implements Runnable {
             }
             Client client = new Client();
             client.connect(host, port);
-            boolean entrance = client.authorisation();
-            if (!entrance)
-                System.exit(0);
+            boolean entrance = false;
+            while (!entrance)
+                entrance = client.authorisation();
             client.run();
             while (true) {
                 String confirmation = userInterface.readUnlimitedArgument("Сервер временно недоступен, хотите повторить подключение? (да/нет)", false);
@@ -89,12 +93,14 @@ public class Client implements Runnable {
     }
 
     public void sendCommand(Command cmd) throws IOException {
+        System.out.println("sending");
         if (SerializationTool.serializeObject(cmd) == null) {
             userInterface.displayMessage("Произошла ошибка сериализации");
             System.exit(-1);
         }
         ByteBuffer send = ByteBuffer.wrap(Objects.requireNonNull(SerializationTool.serializeObject(cmd)));
         datagramChannel.send(send, socketAddress);
+        System.out.println("sent");
     }
 
     private byte[] receiveAnswer() throws IOException {
@@ -109,7 +115,7 @@ public class Client implements Runnable {
         try {
             boolean availability = false;
             Scanner scanner = new Scanner(System.in);
-            datagramChannel.register(selector, SelectionKey.OP_READ);
+            datagramChannel.register(selector, SelectionKey.OP_WRITE);
 //            sendCommand(new Help());
             while (true) {
                 int count = selector.select();
@@ -122,6 +128,7 @@ public class Client implements Runnable {
                     SelectionKey selectionKey = (SelectionKey) iterator.next();
                     iterator.remove();
                     if (selectionKey.isReadable()) {
+                        System.out.println("receiving");
                         byte[] toBeReceived = receiveAnswer();
                         String answer = (String) new SerializationTool().deserializeObject(toBeReceived);
                         if (!availability) {
@@ -189,36 +196,61 @@ public class Client implements Runnable {
     public boolean authorisation() {
         String action = userInterface.readUnlimitedArgument("Здравствуйте! Введите login, если вы уже зарегистрированы. В ином случае, введите register.", false);
         if (action.equals("login")) {
-            login();
+            return login();
         } else {
             if (action.equals("register")) {
-                register();
+                return register();
             } else return false;
         }
-        return true;
     }
 
-    public void login() {
+    public boolean login() {
         try {
+            datagramChannel.register(selector, SelectionKey.OP_WRITE);
             String login = userInterface.readUnlimitedArgument("Введите ваш логин:", false);
-            String password = userInterface.readUnlimitedArgument("Введите пароль", false);
+            String password = getHexString(userInterface.readUnlimitedArgument("Введите пароль", false));
             Command cmd = new Login();
-            cmd.setStringArgs(login, password);
+            User user = new User(login, password);
+            cmd.setUser(user);
             sendCommand(cmd);
+            datagramChannel.register(selector, SelectionKey.OP_READ);
+            selector.select();
+            byte[] toBeReceived = receiveAnswer();
+            String answer = (String) new SerializationTool().deserializeObject(toBeReceived);
+            if (answer.contains(" не "))
+                return false;
+            else {
+                this.user = user;
+                return true;
+            }
         } catch (IOException e) {
             e.printStackTrace();
+            return false;
         }
     }
 
-    public void register() {
+    public boolean register() {
         try {
+            datagramChannel.register(selector, SelectionKey.OP_WRITE);
             String login = userInterface.readUnlimitedArgument("Придумайте логин:", false);
-            String password = userInterface.readUnlimitedArgument("Введите пароль", false);
+            String password = getHexString(userInterface.readUnlimitedArgument("Введите пароль", false));
             Command cmd = new Register();
-            cmd.setStringArgs(login, password);
+            User user = new User(login, password);
+            cmd.setUser(user);
             sendCommand(cmd);
+            datagramChannel.register(selector, SelectionKey.OP_READ);
+            selector.select();
+            byte[] toBeReceived = receiveAnswer();
+            String answer = (String) new SerializationTool().deserializeObject(toBeReceived);
+            if (answer.contains(" не "))
+                return false;
+            else {
+                this.user = user;
+                return true;
+            }
         } catch (IOException e) {
             e.printStackTrace();
+            return false;
         }
     }
 }
