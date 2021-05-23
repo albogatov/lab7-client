@@ -93,14 +93,12 @@ public class Client implements Runnable {
     }
 
     public void sendCommand(Command cmd) throws IOException {
-        System.out.println("sending");
         if (SerializationTool.serializeObject(cmd) == null) {
             userInterface.displayMessage("Произошла ошибка сериализации");
             System.exit(-1);
         }
         ByteBuffer send = ByteBuffer.wrap(Objects.requireNonNull(SerializationTool.serializeObject(cmd)));
         datagramChannel.send(send, socketAddress);
-        System.out.println("sent");
     }
 
     private byte[] receiveAnswer() throws IOException {
@@ -147,11 +145,15 @@ public class Client implements Runnable {
                         datagramChannel.register(selector, SelectionKey.OP_READ);
                         String input = scanner.nextLine().trim();
                         String[] args = input.split("\\s+");
+//                        if (args[0].equals("execute_script")) {
+//
+//                        }
                         if (args[0].equals("save")) {
                             userInterface.displayMessage("Данная команда недоступна пользователю");
                             datagramChannel.register(selector, SelectionKey.OP_WRITE);
                         } else {
                             Command cmd = CommandCenter.getInstance().getCmd(args[0]);
+                            cmd.setUser(user);
                             if (!(cmd == null)) {
                                 if (cmd.getArgumentAmount() == 0) {
                                     sendCommand(cmd);
