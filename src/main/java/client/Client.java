@@ -126,7 +126,6 @@ public class Client implements Runnable {
                     SelectionKey selectionKey = (SelectionKey) iterator.next();
                     iterator.remove();
                     if (selectionKey.isReadable()) {
-                        System.out.println("receiving");
                         byte[] toBeReceived = receiveAnswer();
                         String answer = (String) new SerializationTool().deserializeObject(toBeReceived);
                         if (!availability) {
