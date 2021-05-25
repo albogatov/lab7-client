@@ -55,8 +55,12 @@ public class Client implements Runnable {
             Client client = new Client();
             client.connect(host, port);
             boolean entrance = false;
-            while (!entrance)
-                entrance = client.authorisation();
+            try {
+                while (!entrance)
+                    entrance = client.authorisation();
+            } catch (IOException e) {
+                userInterface.displayMessage("Указан неверный адрес соединения, невозможно завершить авторизацию");
+            }
             client.run();
             while (true) {
                 String confirmation = userInterface.readUnlimitedArgument("Сервер временно недоступен, хотите повторить подключение? (да/нет)", false);
@@ -111,7 +115,8 @@ public class Client implements Runnable {
     @Override
     public void run() {
         try {
-            boolean availability = false;
+            Set keys = selector.selectedKeys();
+            keys.clear();
             Scanner scanner = new Scanner(System.in);
             datagramChannel.register(selector, SelectionKey.OP_WRITE);
 //            sendCommand(new Help());
@@ -120,7 +125,7 @@ public class Client implements Runnable {
                 if (count == 0) {
                     System.exit(0);
                 }
-                Set keys = selector.selectedKeys();
+                keys = selector.selectedKeys();
                 Iterator iterator = keys.iterator();
                 while (iterator.hasNext()) {
                     SelectionKey selectionKey = (SelectionKey) iterator.next();
@@ -128,14 +133,10 @@ public class Client implements Runnable {
                     if (selectionKey.isReadable()) {
                         byte[] toBeReceived = receiveAnswer();
                         String answer = (String) new SerializationTool().deserializeObject(toBeReceived);
-                        if (!availability) {
-                            userInterface.displayMessage("Подключение успешно!");
-                            availability = true;
-                        }
                         if (!answer.contains("Awaiting further client instructions.")) {
                             userInterface.displayMessage(answer);
                             if (answer.equals("Коллекция сохранена в файл")) {
-                                userInterface.displayMessage("До новых встреч");
+                                userInterface.displayMessage("Goodbye, friend");
                                 System.exit(0);
                             }
                         } else datagramChannel.register(selector, SelectionKey.OP_WRITE);
@@ -152,8 +153,8 @@ public class Client implements Runnable {
                             datagramChannel.register(selector, SelectionKey.OP_WRITE);
                         } else {
                             Command cmd = CommandCenter.getInstance().getCmd(args[0]);
-                            cmd.setUser(user);
                             if (!(cmd == null)) {
+                                cmd.setUser(user);
                                 if (cmd.getArgumentAmount() == 0) {
                                     sendCommand(cmd);
                                 }
@@ -188,13 +189,16 @@ public class Client implements Runnable {
             }
         } catch (PortUnreachableException e) {
             userInterface.displayMessage("Порт недоступен");
+        } catch (BindException e) {
+            userInterface.displayMessage("Подключение по данному порту невозможно или у вас нет на него прав");
+        } catch (UnresolvedAddressException e) {
+            userInterface.displayMessage("Подключение по данному адресу не удалось");
         } catch (IOException e) {
             userInterface.displayMessage("Произошла неизвестная ошибка ввода-вывода");
-            System.exit(-1);
         }
     }
 
-    public boolean authorisation() {
+    public boolean authorisation() throws IOException {
         String action = userInterface.readUnlimitedArgument("Здравствуйте! Введите login, если вы уже зарегистрированы. В ином случае, введите register.", false);
         if (action.equals("login")) {
             return login();
@@ -207,6 +211,8 @@ public class Client implements Runnable {
 
     public boolean login() {
         try {
+            Set keys = selector.selectedKeys();
+            keys.clear();
             datagramChannel.register(selector, SelectionKey.OP_WRITE);
             String login = userInterface.readUnlimitedArgument("Введите ваш логин:", false);
             String password = getHexString(userInterface.readUnlimitedArgument("Введите пароль", false));
@@ -222,6 +228,7 @@ public class Client implements Runnable {
                 return false;
             else {
                 this.user = user;
+                userInterface.displayMessage("Вход успешен!");
                 return true;
             }
         } catch (IOException e) {
@@ -233,6 +240,7 @@ public class Client implements Runnable {
     public boolean register() {
         try {
             datagramChannel.register(selector, SelectionKey.OP_WRITE);
+            Set keys = selector.selectedKeys();
             String login = userInterface.readUnlimitedArgument("Придумайте логин:", false);
             String password = getHexString(userInterface.readUnlimitedArgument("Введите пароль", false));
             Command cmd = new Register();
@@ -243,10 +251,12 @@ public class Client implements Runnable {
             selector.select();
             byte[] toBeReceived = receiveAnswer();
             String answer = (String) new SerializationTool().deserializeObject(toBeReceived);
+            keys.clear();
             if (answer.contains(" не "))
                 return false;
             else {
                 this.user = user;
+                userInterface.displayMessage("Вход успешен!");
                 return true;
             }
         } catch (IOException e) {
