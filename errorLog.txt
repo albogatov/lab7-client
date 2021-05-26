@@ -1,5 +1,7 @@
-java.lang.NullPointerException: Cannot invoke "com.opencsv.CSVParser.parseLine(String)" because "server.utils.ReadyCSVParser.parser" is null
-	at server.utils.ReadyCSVParser.readKeyLine(ReadyCSVParser.java:41)
-	at server.utils.ReadyCSVParser.readWorkers(ReadyCSVParser.java:144)
-	at commons.app.server.run(commons.app.server.java:67)
-	at commons.app.server.main(commons.app.server.java:31)
+java.nio.channels.UnresolvedAddressException
+	at java.base/sun.nio.ch.Net.checkAddress(Net.java:149)
+	at java.base/sun.nio.ch.Net.checkAddress(Net.java:157)
+	at java.base/sun.nio.ch.DatagramChannelImpl.connect(DatagramChannelImpl.java:1212)
+	at java.base/sun.nio.ch.DatagramChannelImpl.connect(DatagramChannelImpl.java:1202)
+	at client.Client.connect(Client.java:95)
+	at client.Client.main(Client.java:56)

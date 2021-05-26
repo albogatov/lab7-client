@@ -242,7 +242,10 @@ public class Client implements Runnable {
             datagramChannel.register(selector, SelectionKey.OP_WRITE);
             Set keys = selector.selectedKeys();
             String login = userInterface.readUnlimitedArgument("Придумайте логин:", false);
-            String password = getHexString(userInterface.readUnlimitedArgument("Введите пароль", false));
+            String password = "";
+            do {
+                password = getHexString(userInterface.readUnlimitedArgument("Введите пароль", false));
+            } while (password.isEmpty());
             Command cmd = new Register();
             User user = new User(login, password);
             cmd.setUser(user);
