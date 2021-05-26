@@ -3,7 +3,6 @@ package client;
 import commons.app.Command;
 import commons.app.CommandCenter;
 import commons.app.User;
-import commons.commands.Help;
 import commons.commands.Login;
 import commons.commands.Register;
 import commons.elements.Worker;
@@ -145,9 +144,6 @@ public class Client implements Runnable {
                         datagramChannel.register(selector, SelectionKey.OP_READ);
                         String input = scanner.nextLine().trim();
                         String[] args = input.split("\\s+");
-//                        if (args[0].equals("execute_script")) {
-//
-//                        }
                         if (args[0].equals("save")) {
                             userInterface.displayMessage("Данная команда недоступна пользователю");
                             datagramChannel.register(selector, SelectionKey.OP_WRITE);

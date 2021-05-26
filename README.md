@@ -1,3 +1,3 @@
-# Лабораторная Работа 6
-Вариант 206
-![alt text](https://github.com/albogatov/lab6/blob/main/Package%20app.png)
+# Лабораторная Работа 7
+Вариант 308
+![alt text](https://github.com/albogatov/lab7-client/blob/main/Package%20client.png)
